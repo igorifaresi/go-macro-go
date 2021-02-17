@@ -23,7 +23,8 @@ AWK_SCRIPT=$(cat << EOM
         print $0;
     }
 }
-EOM)
+EOM
+)
 
 cp $PROJECT_TO_GOGOGONIZE $TMP_PROJECT_FOLDER
 
