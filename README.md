@@ -1,9 +1,13 @@
-# install
+# go-macro-go
 
-Please check if you dont have already something called `gogogo` on `/bin` folder
+A simple macro system for avoid repetive writing, of course, this have to be used for right porpouses and with moderation.
 
+## Syntax
+
+```go
+%%mymacro "a";"b";42
 ```
-wget https://raw.githubusercontent.com/igorifaresi/go-macro-go/main/gogogo
-chmod +x gogogo
-mv gogogo /bin/gogogo
-```
+
+## Usage
+
+For while, the script is not checking `GOPATH` for get real golang projects folder. In my machine `GOPATH` points to my home folder, then I hard coded the gopath value in script for my home path.
