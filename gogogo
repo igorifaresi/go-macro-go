@@ -1,28 +1,85 @@
-#!/bin/sh
+import sys
+import os
+import subprocess
 
-[ "$1" = "" ] && {
-  echo "gogogo: Project required";
-  exit;
-}
+if len(sys.argv) == 1:
+    print("Project required")
+    exit(1)
 
-SOURCE_PATH=~/go/src
-TMP_PROJECT_FOLDER=$SOURCE_PATH/gogogo_tmp
-PROJECT_TO_GOGOGONIZE=$SOURCE_PATH/$1
-OUTPUT_FOLDER=$(pwd)
+project = sys.argv[1]
 
-cp -r $PROJECT_TO_GOGOGONIZE $TMP_PROJECT_FOLDER
+gopath = "/home/ifaresi/go/src/"
 
-for f in $TMP_PROJECT_FOLDER/*
-do
-  echo "Processing file "$f
-  awk -f mymacros.awk $f
-done
+os.system("rm -rf "+gopath+"gogogo_tmp ")
+s = os.system("cp -r "+gopath+project+" "+gopath+"gogogo_tmp ")
+if s != 0:
+    print("Cannot create gogogo_tmp temporary project")
+    exit(1)
 
-[ "$2" = "build" ] && {
-  go build gogogo_tmp;
-  mv gogogo_tmp $1;
-}
+# create macro awk file
+with open(gopath+project+"/macros.gogogo") as macro_file:
+    awk_file = open(gopath+"gogogo_tmp/.mymacros.awk", "w")
+    first = True
+    have_a_valid_line = False
+    output = ""
+    for line in macro_file.readlines():
+        if line == "":
+            continue
+        macro_name = line.split("::")[0]
+        expression = line.split("::")[1]
+        have_a_valid_line = True
+        if first:
+            output = "if ($1 == \"%%"+macro_name+"\") {\n"+"{\n"+"   split($0,a,\"%%"+macro_name+"\");\n"+"   split(a[2], b, \";\")\n"+"   print "+expression+";\n"+"}\n"
+            first = False
+        else:
+            output = "} else if ($1 == \"%%"+macro_name+"\") {\n"+"{\n"+"   split($0,a,\"%%"+macro_name+"\");\n"+"   split(a[2], b, \";\")\n"+"   print "+expression+";\n"+"}\n"
 
-[ "$2" = "run" ] && go run gogogo_tmp;
+    if not have_a_valid_line:
+        output = """
+            {
+                print $0;
+            }
+        """
+    else:
+        output = output+"""
+            } else {
+                print $0;
+            }
+        """
+        output = "{\n"+output+"}"
+    awk_file.write(output)
+    awk_file.close()
 
-rm -rf $TMP_PROJECT_FOLDER
+# process macros
+dir = os.fsencode(gopath+"gogogo_tmp")
+for f in os.listdir(dir):
+    filename = os.fsdecode(f)
+    if filename.endswith(".go"):
+        utf8filename = f.decode("utf-8")
+        print("decoding "+utf8filename)
+        proc = subprocess.Popen(
+            "awk -f "+gopath+"gogogo_tmp/.mymacros.awk    "+gopath+"gogogo_tmp/"+utf8filename,
+            stdout=subprocess.PIPE,
+            shell=True
+        )
+        (out, err) = proc.communicate()
+        str_out = out.decode("utf-8")
+        output_file = open(gopath+"gogogo_tmp/"+utf8filename, "w")
+        output_file.write(str_out)
+        output_file.close()
+
+if len(sys.argv) >= 3:
+    if sys.argv[2] == "run":
+        s = os.system("go run gogogo_tmp")
+        if s != 0:
+            print("Cannot run project")
+            exit(1)
+    elif sys.argv[2] == "build":
+        s = os.system("go build gogogo_tmp")
+        if s != 0:
+            print("Cannot build project")
+            exit(1)
+        s = os.system("cp gogogo_tmp "+project+"_build")
+        if s != 0:
+            print("Cannot rename builded project")
+            exit(1)
