@@ -44,7 +44,8 @@ func main() {
     
     return Success("OK")
   })
-}```
+}
+```
 
 A sintaxe se baseia em o nome da macro preceido de `%%` e os parâmetros separados por `;`.
 Neste caso a macro será expandida para:
@@ -68,4 +69,5 @@ func main() {
     
     return Success("OK")
   })
-}```
+}
+```
